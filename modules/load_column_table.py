@@ -5,9 +5,9 @@ import pandas as pd
 path = os.environ.get('PROJECT_SBER_PATH', '..')
 
 
-def load_column_table( task_name, columns, path_output, **kwargs):
+def load_column_table(task_name, columns, path_output, **kwargs):
     ti = kwargs['ti']
-    result = ti.xcom_pull(task_ids=task_name)
+    result = ti.xcom_pull(task_ids=f'load_db_tables_columns.{task_name}')
 
     df = pd.DataFrame(result, columns=columns)
 
