@@ -1,9 +1,10 @@
 import pandas as pd
 import os
 
-from sqlalchemy import create_engine, Column, Integer, String, Date, Float, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Date, Float, ForeignKey, Time
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, sessionmaker
+
 
 path = os.environ.get('PROJECT_SBER_PATH')
 
@@ -39,59 +40,63 @@ def load_pkl_to_db_primary_key(path_files, tables_name, db_config):
     df_parent = pd.read_pickle(path_files[0])
     df_subsidiary = pd.read_pickle(path_files[1])
 
-    name_parent = tables_name[0]
-    name_subsidiary = tables_name[1]
-
     connection = (f"postgresql://{db_config['username']}:"
                   f"{db_config['password']}@"
                   f"{db_config['host']}:"
                   f"{db_config['port']}/"
                   f"{db_config['database']}")
 
-    engine = create_engine(connection)
     Base = declarative_base()
 
-    def create_table_class(table_name, df, is_subsidiary=False):
-        primary_column_key = 'session_id'
-        class DynamicTable(Base):
-            __tablename__ = table_name
+    class HitsTable(Base):
+        __tablename__= tables_name[0]
+        session_id = Column(String, primary_key=True)
+        hit_date = Column(Date)
+        hit_time = Column(Float)
+        hit_number = Column(Integer)
+        hit_page_path = Column(String)
+        event_category = Column(String)
+        event_action = Column(String)
+        target = Column(Integer)
 
-            for column_name, column_type in zip(df.columns, df.dtypes):
-                if column_name == primary_column_key:
-                    vars()[column_name] = Column(String, primary_key=True)
-                elif column_type == 'object':
-                    vars()[column_name] = Column(String)
-                elif column_type == 'int64':
-                    vars()[column_name] = Column(Integer)
-                elif column_type == 'category':
-                    vars()[column_name] = Column(String)
-                elif column_type == 'float64':
-                    vars()[column_name] = Column(Float)
-                elif column_type == 'datetime64[ns]':
-                    vars()[column_name] = Column(Date)
+    class SessionsTable(Base):
+        __tablename__= tables_name[1]
+        session_id = Column(
+            String,
+            ForeignKey(f'{tables_name[0]}.session_id'),
+            primary_key=True
+        )
+        client_id = Column(String)
+        visit_date = Column(Date)
+        visit_time = Column(Time)
+        visit_number = Column(Integer)
+        utm_source = Column(String)
+        utm_medium = Column(String)
+        utm_campaign = Column(String)
+        utm_adcontent = Column(String)
+        device_category = Column(String)
+        device_brand = Column(String)
+        device_screen_resolution = Column(String)
+        device_browser = Column(String)
+        geo_country = Column(String)
+        geo_city = Column(String)
+        device_os_y = Column(String)
+        organic_traff = Column(Integer)
 
-            if is_subsidiary:
-                vars()['parent_id'] = Column(
-                    String,
-                    ForeignKey('table_processing_hits.session_id')
-                )
-                vars()['parent'] = relationship(
-                    'DynamicTable',
-                    backref='subsidiaries',
-                )
+    engine = create_engine(connection)
 
-        return DynamicTable
-
-
-    ParentTable = create_table_class(name_parent, df_parent)
     Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
-    df_parent.to_sql(name_parent, engine, if_exists='replace', index=False)
+    for index, row in df_parent.iterrows():
+        table_hits = HitsTable(**row.to_dict())
+        session.add(table_hits)
 
-    SubsidiaryTable = create_table_class(name_subsidiary, df_subsidiary, is_subsidiary=True)
-    Base.metadata.create_all(engine)
-
-    df_subsidiary.to_sql(name_subsidiary, engine, if_exists='replace', index=False)
+    for index, row in df_subsidiary.iterrows():
+        table_sessions = SessionsTable(**row.to_dict())
+        session.add(table_sessions)
+    session.commit()
 
 
 def load_pkl_to_db_new_table(directory_file):
