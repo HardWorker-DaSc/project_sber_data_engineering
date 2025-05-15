@@ -1,5 +1,4 @@
 import os
-import sys
 import pandas as pd
 
 from airflow.hooks.base import BaseHook
@@ -8,8 +7,31 @@ from sqlalchemy_utils.types.pg_composite import psycopg2
 
 path = os.environ.get('PROJECT_SBER_PATH', '..')
 
+def check_for_compatibility(path_file) -> None:
+    general_path = os.path.dirname(path_file)
+
+    old_hit_path =  f'{path}/data/data_columns/download_column_ga_hits.pkl'
+    new_hit_path = f'{general_path}/hits_new.pkl'
+
+    df_hits1 = pd.read_pickle(old_hit_path)
+    df_hits2 = pd.read_pickle(new_hit_path)
+    df_hits_all = pd.concat(
+        [df_hits1['session_id'], df_hits2['session_id']],
+        ignore_index=True
+    )
+    df_sessions = pd.read_pickle(path_file)
+
+    df_sessions_compatibility = (
+        df_sessions[df_sessions['session_id'].isin(df_hits_all)]
+    )
+    df_sessions_compatibility.to_pickle(path_file)
 
 def sql_join_new_processing_df_in_db_table(path_file):
+
+    if 'sessions' in path_file:
+        check_for_compatibility(path_file)
+
+
     data = pd.read_pickle(path_file)
     conn_id = 'airflow_docker_pr-database-1'
     connect = BaseHook.get_connection(conn_id)
