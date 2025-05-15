@@ -109,6 +109,7 @@ services:
       POSTGRES_DB: user_practice
     volumes:
       - database-data:/var/lib/postgresql/data
+      - ~project_sbr:/root/project_sbr
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "user_practice"]
       interval: 10s
@@ -152,6 +153,7 @@ services:
     volumes:
       - ~/project_sbr:/home/airflow/project_sbr
       - ~/project_sbr/airflow.cfg:/opt/airflow/airflow.cfg
+      - ~/project_sbr/dags:/opt/airflow/dags
     ports:
       - "8080:8080"
     healthcheck:
@@ -172,6 +174,7 @@ services:
     volumes:
       - ~/project_sbr:/home/airflow/project_sbr
       - ~/project_sbr/airflow.cfg:/opt/airflow/airflow.cfg
+      - ~/project_sbr/dags:/opt/airflow/dags
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
@@ -190,6 +193,7 @@ services:
     volumes:
       - ~/project_sbr:/home/airflow/project_sbr
       - ~/project_sbr/airflow.cfg:/opt/airflow/airflow.cfg
+      - ~/project_sbr/dags:/opt/airflow/dags
     healthcheck:
       # yamllint disable rule:line-length
       test:
