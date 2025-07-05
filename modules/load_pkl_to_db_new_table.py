@@ -23,8 +23,13 @@ def check_for_compatibility(directory_file, name_files) -> None:
 
 
 def load_pkl_to_db_no_primary_key(path_file, table_name, db_config):
-    df = pd.read_pickle(path_file)
 
+
+    def read_csv(path_file):
+        for chunk in pd.read_csv(path_file, chunksize=10000)
+            yield chunk
+
+    
     connection = (f"postgresql://{db_config['username']}:"
                   f"{db_config['password']}@"
                   f"{db_config['host']}:"
@@ -33,7 +38,15 @@ def load_pkl_to_db_no_primary_key(path_file, table_name, db_config):
 
     engine = create_engine(connection)
 
-    df.to_sql(table_name, engine, if_exists='replace', index=False)
+    first_cycle = True
+    
+    for df in read_csv(path_file):
+
+        if first_cycle:
+            df.to_sql(table_name, engine, if_exists='replace', index=False)
+            first_cycle = False
+        else:
+            df.to_sql(table_name, engine, if_exists='append', index=False)
 
 
 def load_pkl_to_db_primary_key(path_files, tables_name, db_config):
