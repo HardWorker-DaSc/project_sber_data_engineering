@@ -94,7 +94,7 @@ with DAG(
         load_raw_table = PythonOperator(
             task_id='load_raw_table',
             python_callable=load_pkl_to_db_new_table,
-            op_kwargs={'directory_file': f'{path}/data/data_old'}
+            op_kwargs={'directory_file': f'{path}/data/data_old/csv'}
         )
         processing_hits = PythonOperator(
             task_id='processing_hits',
