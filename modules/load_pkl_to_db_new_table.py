@@ -42,11 +42,20 @@ def load_pkl_to_db_no_primary_key(path_file, table_name, db_config):
     
     for df in read_csv(path_file):
 
+        type_df = df.dtype.to_dict()
+        dtype = {}
+
+        for key in type_df.keys():
+            if str(type_df[key]) in 'int64':
+                dtype[key] = Integer()
+            else:
+                dtype[key] = String()
+
         if first_cycle:
-            df.to_sql(table_name, engine, if_exists='replace', index=False)
+            df.to_sql(table_name, engine, if_exists='replace', index=False, dtype=dtype)
             first_cycle = False
         else:
-            df.to_sql(table_name, engine, if_exists='append', index=False)
+            df.to_sql(table_name, engine, if_exists='append', index=False, dtype=dtype)
 
 
 def load_pkl_to_db_primary_key(path_files, tables_name, db_config):
